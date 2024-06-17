@@ -2,7 +2,9 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import cors from "cors";
-import codeBlocks from "./codeBlocks.js";
+import router from "./Routes/index.js";
+import codeBlocks from "./Data/codeBlocks.js";
+import socketHandler from "./Sockets/index.js";
 
 const app = express();
 const server = createServer(app);
@@ -14,35 +16,9 @@ const io = new Server(server, {
 });
 
 app.use(cors());
+app.use("/", router);
 
-app.get("/", (req, res) => {
-  res.send("Code Sharing App");
-});
-
-app.get("/codeBlocks", (req, res) => {
-  console.log("codeBlocks");
-  res.send(codeBlocks);
-});
-
-io.on("connection", (socket) => {
-  console.log("User connected with id:", socket.id);
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected", socket.id);
-  });
-
-  socket.on("code change", (updatedCodeBlock) => {
-    console.log("Received code change:", updatedCodeBlock);
-    const index = codeBlocks.findIndex(
-      (block) => block.id === updatedCodeBlock.id
-    );
-    if (index !== -1) {
-      codeBlocks[index] = updatedCodeBlock;
-    }
-    io.emit("code update", updatedCodeBlock);
-    console.log("Broadcasted code update:", updatedCodeBlock);
-  });
-});
+socketHandler(io, codeBlocks);
 
 server.on("clientError", (err, socket) => {
   console.error("ClientError:", err);
