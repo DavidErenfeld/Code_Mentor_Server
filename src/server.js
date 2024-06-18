@@ -1,19 +1,15 @@
-import express from "express";
 import { createServer } from "http";
-import { Server } from "socket.io";
-import cors from "cors";
-import router from "./Routes/index.js";
-import codeBlocks from "./Data/codeBlocks.js";
-import socketHandler from "./Sockets/index.js";
+import { Server as SocketServer } from "socket.io";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
-import initializeDatabase from "./Data/codeBlocks.js";
+import app from "./app.js";
+import socketHandler from "./Sockets/index.js";
+import initializeDatabase from "./Data/InitializationControllers.js";
 
 dotenv.config();
 
-const app = express();
 const server = createServer(app);
-const io = new Server(server, {
+const io = new SocketServer(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
@@ -21,23 +17,19 @@ const io = new Server(server, {
 });
 
 const uri = process.env.DB_URI;
-// connect to the database
 mongoose
-  .connect(process.env.DB_URI)
-  .then(() => console.log("Connected to MongoDB"))
+  .connect(uri)
+  .then(() => {
+    console.log("Connected to MongoDB");
+    initializeDatabase();
+  })
   .catch((err) => console.error("Could not connect to MongoDB...", err));
-initializeDatabase();
 
-app.use(cors());
-
-app.use("/", router);
-
-socketHandler(io, codeBlocks);
+socketHandler(io);
 
 server.on("clientError", (err, socket) => {
   console.error("ClientError:", err);
   socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
-  socket.destroy();
 });
 
 const PORT = process.env.PORT || 3000;

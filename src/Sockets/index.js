@@ -29,7 +29,6 @@ const socketHandler = (io) => {
         console.error("Error in join code block:", error);
         socket.emit("error", "Failed to join block: " + error.message);
       }
-      console.log("After joining:", JSON.stringify(codeBlocksStatus, null, 2));
     });
 
     socket.on("disconnect", () => {
@@ -54,10 +53,6 @@ const socketHandler = (io) => {
       } catch (error) {
         console.error("Error in disconnect:", error);
       }
-      console.log(
-        "After disconnecting:",
-        JSON.stringify(codeBlocksStatus, null, 2)
-      );
     });
 
     socket.on("code change", (blockId, updatedCode) => {
