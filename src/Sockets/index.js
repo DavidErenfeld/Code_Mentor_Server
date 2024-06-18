@@ -1,43 +1,58 @@
-let mentorId = null;
+const codeBlocksStatus = {
+  1: { mentorId: null, users: [] },
+  2: { mentorId: null, users: [] },
+  3: { mentorId: null, users: [] },
+  4: { mentorId: null, users: [] },
+};
 
-const socketHandler = (io, codeBlocks) => {
+const socketHandler = (io) => {
   io.on("connection", (socket) => {
-    console.log("User connected with id:", socket.id);
+    socket.on("join code block", (blockId) => {
+      const block = codeBlocksStatus[blockId];
+      socket.blockId = blockId;
 
-    // Assign roles
-    if (!mentorId) {
-      mentorId = socket.id;
-      socket.emit("set role", "mentor");
-      console.log("Assigned mentor role to user with id:", socket.id);
-    } else {
-      socket.emit("set role", "student");
-      console.log("Assigned student role to user with id:", socket.id);
-    }
-
-    // Handle disconnection
-    socket.on("disconnect", () => {
-      console.log("User disconnected", socket.id);
-      if (socket.id === mentorId) {
-        mentorId = null;
-        console.log(
-          `Mentor (${socket.id}) disconnected, setting all users to read-only.`
-        );
-        io.emit("set role", "readonly");
+      if (!block.users.includes(socket.id)) {
+        if (!block.mentorId) {
+          block.mentorId = socket.id;
+          block.users.unshift(socket.id);
+          socket.emit("set role", "mentor", socket.id);
+        } else {
+          block.users.push(socket.id);
+          socket.emit("set role", "student", socket.id);
+        }
+        socket.join(blockId);
       }
+      console.log("After joining:", JSON.stringify(codeBlocksStatus, null, 2));
     });
 
-    // Handle code change
-    socket.on("code change", (updatedCodeBlock) => {
-      if (socket.id !== mentorId) {
-        console.log("Received code change:", updatedCodeBlock);
-        const index = codeBlocks.findIndex(
-          (block) => block.id === updatedCodeBlock.id
-        );
-        if (index !== -1) {
-          codeBlocks[index] = updatedCodeBlock;
+    socket.on("disconnect", () => {
+      const blockId = socket.blockId;
+      if (blockId) {
+        const room = codeBlocksStatus[blockId];
+        if (room) {
+          const index = room.users.indexOf(socket.id);
+          if (index !== -1) {
+            room.users.splice(index, 1);
+            if (socket.id === room.mentorId) {
+              if (room.users.length > 0) {
+                room.mentorId = room.users[0];
+                io.to(room.mentorId).emit("set role", "mentor", room.mentorId);
+              } else {
+                room.mentorId = null;
+              }
+            }
+          }
         }
-        io.emit("code update", updatedCodeBlock);
-        console.log("Broadcasted code update:", updatedCodeBlock);
+      }
+      console.log(
+        "After disconnecting:",
+        JSON.stringify(codeBlocksStatus, null, 2)
+      );
+    });
+
+    socket.on("code change", (blockId, updatedCode) => {
+      if (socket.id !== codeBlocksStatus[blockId].mentorId) {
+        io.to(blockId).emit("code update", updatedCode);
       }
     });
   });
