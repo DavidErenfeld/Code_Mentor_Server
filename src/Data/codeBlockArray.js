@@ -5,7 +5,6 @@ const codeBlocks = [
     code: `// Print numbers from 1 to 5
 for (let i = 1; i <= 5; i++) {
   // Complete the code to print the number
-  console.log(i);
 }`,
     solution: `// Print numbers from 1 to 5
 for (let i = 1; i <= 5; i++) {

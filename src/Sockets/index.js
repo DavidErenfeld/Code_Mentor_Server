@@ -58,7 +58,7 @@ const socketHandler = (io) => {
     socket.on("code change", (blockId, updatedCode) => {
       try {
         if (socket.id !== codeBlocksStatus[blockId].mentorId) {
-          io.to(blockId).emit("code update", updatedCode);
+          socket.to(blockId).emit("code update", updatedCode);
         }
       } catch (error) {
         console.error("Error in code change:", error);
