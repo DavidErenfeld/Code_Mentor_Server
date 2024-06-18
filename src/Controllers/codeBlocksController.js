@@ -1,9 +1,10 @@
-import codeBlocks from "../Data/codeBlocks.js";
-const originalCodeBlocks = JSON.parse(JSON.stringify(codeBlocks));
-export const getCodeBlocks = (req, res) => {
+import CodeBlock from "../Models/codeBlockModel.js";
+
+export const getCodeBlocks = async (req, res) => {
   try {
     console.log("Fetching codeBlocks");
-    res.status(200).send(originalCodeBlocks);
+    const codeBlocks = await CodeBlock.find();
+    res.status(200).json(codeBlocks);
   } catch (error) {
     console.error("Error fetching codeBlocks:", error);
     res

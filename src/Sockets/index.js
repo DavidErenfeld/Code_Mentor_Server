@@ -8,28 +8,35 @@ const codeBlocksStatus = {
 const socketHandler = (io) => {
   io.on("connection", (socket) => {
     socket.on("join code block", (blockId) => {
-      const block = codeBlocksStatus[blockId];
-      socket.blockId = blockId;
+      try {
+        const block = codeBlocksStatus[blockId];
+        if (!block) throw new Error("Block does not exist");
 
-      if (!block.users.includes(socket.id)) {
-        if (!block.mentorId) {
-          block.mentorId = socket.id;
-          block.users.unshift(socket.id);
-          socket.emit("set role", "mentor", socket.id);
-        } else {
-          block.users.push(socket.id);
-          socket.emit("set role", "student", socket.id);
+        socket.blockId = blockId;
+
+        if (!block.users.includes(socket.id)) {
+          if (!block.mentorId) {
+            block.mentorId = socket.id;
+            block.users.unshift(socket.id); // Add mentor at the start
+            socket.emit("set role", "mentor", socket.id);
+          } else {
+            block.users.push(socket.id); // Add student at the end
+            socket.emit("set role", "student", socket.id);
+          }
+          socket.join(blockId);
         }
-        socket.join(blockId);
+      } catch (error) {
+        console.error("Error in join code block:", error);
+        socket.emit("error", "Failed to join block: " + error.message);
       }
       console.log("After joining:", JSON.stringify(codeBlocksStatus, null, 2));
     });
 
     socket.on("disconnect", () => {
-      const blockId = socket.blockId;
-      if (blockId) {
-        const room = codeBlocksStatus[blockId];
-        if (room) {
+      try {
+        const blockId = socket.blockId;
+        if (blockId && codeBlocksStatus[blockId]) {
+          const room = codeBlocksStatus[blockId];
           const index = room.users.indexOf(socket.id);
           if (index !== -1) {
             room.users.splice(index, 1);
@@ -39,10 +46,13 @@ const socketHandler = (io) => {
                 io.to(room.mentorId).emit("set role", "mentor", room.mentorId);
               } else {
                 room.mentorId = null;
+                io.to(blockId).emit("set role", "readonly");
               }
             }
           }
         }
+      } catch (error) {
+        console.error("Error in disconnect:", error);
       }
       console.log(
         "After disconnecting:",
@@ -51,8 +61,12 @@ const socketHandler = (io) => {
     });
 
     socket.on("code change", (blockId, updatedCode) => {
-      if (socket.id !== codeBlocksStatus[blockId].mentorId) {
-        io.to(blockId).emit("code update", updatedCode);
+      try {
+        if (socket.id !== codeBlocksStatus[blockId].mentorId) {
+          io.to(blockId).emit("code update", updatedCode);
+        }
+      } catch (error) {
+        console.error("Error in code change:", error);
       }
     });
   });
