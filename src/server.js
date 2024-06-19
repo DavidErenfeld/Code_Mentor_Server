@@ -16,14 +16,16 @@ const io = new SocketServer(server, {
   },
 });
 
-const uri = process.env.DB_URI;
-mongoose
-  .connect(uri)
-  .then(() => {
-    console.log("Connected to MongoDB");
-    initializeDatabase();
-  })
-  .catch((err) => console.error("Could not connect to MongoDB...", err));
+const initDb = () => {
+  const uri = process.env.DB_URI;
+  mongoose
+    .connect(uri)
+    .then(() => {
+      console.log("Connected to MongoDB");
+      initializeDatabase();
+    })
+    .catch((err) => console.error("Could not connect to MongoDB...", err));
+};
 
 socketHandler(io);
 
@@ -33,6 +35,7 @@ server.on("clientError", (err, socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
+initDb();
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
